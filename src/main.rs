@@ -271,23 +271,26 @@ fn load_polytope(scene: &mut Scene) {
 }
 
 fn draw_variable_width_line(start_point: Vector2<f32>, end_point: Vector2<f32>, start_radius: f32, end_radius: f32, color: Color) {
-    let edge_direction = (end_point - start_point).normalize();
-    let left_of_edge = Vector2::new(edge_direction.y, -edge_direction.x);
-    let right_of_edge = Vector2::new(-edge_direction.y, edge_direction.x);
+    if color.a > 0.0 {
+        let edge_direction = (end_point - start_point).normalize();
+        let left_of_edge = Vector2::new(edge_direction.y, -edge_direction.x);
+        let right_of_edge = Vector2::new(-edge_direction.y, edge_direction.x);
+        
+        draw_triangle(
+            vec2(start_point.x + (left_of_edge.x * start_radius), start_point.y + (left_of_edge.y * start_radius)),
+            vec2(start_point.x + (right_of_edge.x * start_radius), start_point.y + (right_of_edge.y * start_radius)),
+            vec2(end_point.x + (left_of_edge.x * end_radius), end_point.y + (left_of_edge.y * end_radius)),
+            color
+        );
+        
+        draw_triangle(
+            vec2(end_point.x + (left_of_edge.x * end_radius), end_point.y + (left_of_edge.y * end_radius)),
+            vec2(end_point.x + (right_of_edge.x * end_radius), end_point.y + (right_of_edge.y * end_radius)),
+            vec2(start_point.x + (right_of_edge.x * start_radius), start_point.y + (right_of_edge.y * start_radius)),
+            color
+        );
+    }
     
-    draw_triangle(
-        vec2(start_point.x + (left_of_edge.x * start_radius), start_point.y + (left_of_edge.y * start_radius)),
-        vec2(start_point.x + (right_of_edge.x * start_radius), start_point.y + (right_of_edge.y * start_radius)),
-        vec2(end_point.x + (left_of_edge.x * end_radius), end_point.y + (left_of_edge.y * end_radius)),
-        color
-    );
-    
-    draw_triangle(
-        vec2(end_point.x + (left_of_edge.x * end_radius), end_point.y + (left_of_edge.y * end_radius)),
-        vec2(end_point.x + (right_of_edge.x * end_radius), end_point.y + (right_of_edge.y * end_radius)),
-        vec2(start_point.x + (right_of_edge.x * start_radius), start_point.y + (right_of_edge.y * start_radius)),
-        color
-    );
 }
 
 fn mouse_control(previous_mouse_pos: Vector2<f32>, dimension: usize, shape_matrix: DMatrix<f32>, axis: usize, sensitivity: f32) -> DMatrix<f32> {
@@ -595,9 +598,20 @@ async fn main() {
             set_default_camera();
             image_index = -2;
             set_window_size(1024, 1024);
-            shape_position[0] = 0.0;
+            for i in 0..scene.dimension {
+                shape_position[i] = 0.0;
+            }
             
             play_sound_once(&done_sound);
+        }
+        
+        if is_key_pressed(KeyCode::Escape) {
+            set_default_camera();
+            image_index = -2;
+            set_window_size(1024, 1024);
+            for i in 0..scene.dimension {
+                shape_position[i] = 0.0;
+            }
         }
         
         if is_key_pressed(KeyCode::Enter) { // Start
@@ -659,8 +673,6 @@ async fn main() {
                     shape_position[i] = starting_position[i];
                 }
             }
-            
-            println!("{:?}", starting_position);
             
             set_window_size(scene.resolution, scene.resolution);
         }
