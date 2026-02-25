@@ -332,9 +332,9 @@ fn color_from_wv(vector: &DVector<f32>, w_scale: f32) -> Color {
         let negative_w_component = f32::clamp(-vector[3] * w_scale, 0.0, 1.0);
 
         if vector[3] > 0.0 {
-            return Color::new(1.0, f32::lerp(1.0, 0.5, positive_w_component), f32::lerp(1.0, 0.0, positive_w_component), 1.0 - positive_w_component);
+            return Color::new(1.0, f32::lerp(1.0, 0.5, (positive_w_component * 2.0).min(1.0)), f32::lerp(1.0, 0.0, (positive_w_component * 2.0).min(1.0)), 1.0 - positive_w_component);
         } else {
-            return Color::new(f32::lerp(1.0, 0.0, negative_w_component), f32::lerp(1.0, 0.5, negative_w_component), 1.0, 1.0 - negative_w_component);
+            return Color::new(f32::lerp(1.0, 0.0, (negative_w_component * 2.0).min(1.0)), f32::lerp(1.0, 0.5, (negative_w_component * 2.0).min(1.0)), 1.0, 1.0 - negative_w_component);
         }
     }
     
@@ -344,9 +344,9 @@ fn color_from_wv(vector: &DVector<f32>, w_scale: f32) -> Color {
     let fade_strength = f32::min(wv_vector.length() * w_scale, 1.0);
     
     return Color::new(
-        f32::lerp(1.0, fade_to_color.r, fade_strength),
-        f32::lerp(1.0, fade_to_color.g, fade_strength),
-        f32::lerp(1.0, fade_to_color.b, fade_strength),
+        f32::lerp(1.0, fade_to_color.r, (fade_strength * 2.0).min(1.0)),
+        f32::lerp(1.0, fade_to_color.g, (fade_strength * 2.0).min(1.0)),
+        f32::lerp(1.0, fade_to_color.b, (fade_strength * 2.0).min(1.0)),
         1.0 - fade_strength
     );
 }
@@ -397,7 +397,7 @@ fn render(vertices: &Vec<DVector<f32>>, edges: &Vec<usize>, subdivisions: i32, s
             
             let edge_center = (&vertex_1 + &vertex_2) / 2.0;
             
-            let mut color = if shape_matrix.ncols() < 4 {WHITE} else {color_from_wv(&edge_center, w_scale)};
+            let mut color = color_from_wv(&edge_center, w_scale);
             // let mut color = color_from_off_axis(&edge_center, w_scale, dimension);
             color.a *= fade_from_depth(edge_center[2], near, far, zoom);
             color.a *= 1.0 - (distance_from_nvolume(&edge_center, 5) * w_scale).clamp(0.0, 1.0);

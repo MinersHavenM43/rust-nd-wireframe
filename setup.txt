@@ -1,4 +1,4 @@
-./heptagon.off
+./6 op 5-cell.off
 1200
 80
 4

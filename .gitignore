@@ -1,5 +1,4 @@
 /target
-*.off
 /images
 render.gif
 120-cell.gif
@@ -7,3 +6,4 @@ render.gif
 *.gif
 *.mp4
 *.png
+*.exe
