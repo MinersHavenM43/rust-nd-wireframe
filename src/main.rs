@@ -1,4 +1,4 @@
-use macroquad::audio::load_sound;
+use macroquad::audio::load_sound_from_bytes;
 use macroquad::audio::play_sound_once;
 use macroquad::miniquad::window::set_window_size;
 use macroquad::prelude::*;
@@ -6,6 +6,7 @@ use na::Vector2;
 use nalgebra::{self as na, DMatrix, DVector};
 use std;
 use std::f32::consts::TAU;
+use std::f32;
 use std::vec;
 
 fn rotate_matrix(axis_1: usize, axis_2: usize, angle_in_radians: f32, dimension: usize) -> DMatrix<f32> {
@@ -433,11 +434,11 @@ struct Scene {
 
 impl Scene {
     fn setup() -> Self {
-        if !std::path::Path::new("./src/setup.txt").exists() {
+        if !std::path::Path::new("./setup.txt").exists() {
             panic!("no setup.txt file!!!!");
         }
         
-        let setup_file_contents = std::fs::read_to_string("./src/setup.txt").unwrap();
+        let setup_file_contents = std::fs::read_to_string("./setup.txt").unwrap();
         let lines: Vec<&str> = setup_file_contents.lines().collect();
         
         Scene {
@@ -455,6 +456,8 @@ impl Scene {
 
 #[macroquad::main("nD Renderer")]
 async fn main() {
+    const done_sound_bytes: &[u8] = include_bytes!(".././done.wav");
+    
     let mut scene = Scene::setup();
     
     load_polytope(&mut scene);
@@ -483,7 +486,7 @@ async fn main() {
     let mut starting_position: Vec<f32> = vec![];
     let mut motion: Vec<f32> = vec![];
     
-    let done_sound = load_sound("done.wav").await.unwrap();
+    let done_sound = load_sound_from_bytes(done_sound_bytes).await.unwrap();
     
     set_window_size(1024, 1024);
 
@@ -617,14 +620,14 @@ async fn main() {
         if is_key_pressed(KeyCode::Enter) { // Start
             image_index = -1;
             
-            if !std::path::Path::new("./src/rotations.txt").exists() {
+            if !std::path::Path::new("./rotations.txt").exists() {
                 panic!("no rotations.txt file!!!!");
             }
-            if !std::path::Path::new("./src/motion.txt").exists() {
+            if !std::path::Path::new("./motion.txt").exists() {
                 panic!("no motion.txt file!!!!");
             }
 
-            let rotation_file_contents = std::fs::read_to_string("./src/rotations.txt").unwrap();
+            let rotation_file_contents = std::fs::read_to_string("./rotations.txt").unwrap();
             
             rotations.clear();
             rotations_global_vs_local.clear();
@@ -647,7 +650,7 @@ async fn main() {
                 rotations_global_vs_local.push(rotation_file_values[i + 2] == 1);
             }
             
-            let motion_file_contents = std::fs::read_to_string("./src/motion.txt").unwrap();
+            let motion_file_contents = std::fs::read_to_string("./motion.txt").unwrap();
             
             starting_position.clear();
             motion.clear();
