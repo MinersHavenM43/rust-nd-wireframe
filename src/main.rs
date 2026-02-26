@@ -492,9 +492,6 @@ async fn main() {
 
     loop {
         // Rotate Shape
-        if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_pressed(MouseButton::Middle) {
-            (previous_mouse_pos.x, previous_mouse_pos.y) = mouse_position();
-        }
         
         if is_mouse_button_down(MouseButton::Left) || is_mouse_button_down(MouseButton::Middle) {
             if is_key_down(KeyCode::LeftControl) {
@@ -514,9 +511,15 @@ async fn main() {
             } else {
                 shape_matrix = mouse_control(previous_mouse_pos, scene.dimension, shape_matrix, 2, 1.0/216.0);
             }
-            
-            (previous_mouse_pos.x, previous_mouse_pos.y) = mouse_position();
         }
+        
+        if is_mouse_button_down(MouseButton::Right) {
+            let angle_diff = Vec2::new(mouse_position().0 - (screen_width() / 2.0), mouse_position().1 - (screen_height() / 2.0)).angle_between(Vec2::new(previous_mouse_pos.x - (screen_width() / 2.0), previous_mouse_pos.y - (screen_height() / 2.0)));
+            
+            shape_matrix = rotate_matrix(0, 1, angle_diff, scene.dimension) * &shape_matrix;
+        }
+        
+        (previous_mouse_pos.x, previous_mouse_pos.y) = mouse_position();
         
         let scroll = mouse_wheel().1;
         if scroll < 0.0 {
