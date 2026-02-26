@@ -56,6 +56,7 @@ Uh yeah I think that's about it for how to use this program. The rest will dive 
 "orange" and "green" here refer to 90 degree apart hues on the hue circle. the WV (3, 4) plane is rendered as a hue circle with different angles.
 
 ## Controls
+RMB + move mouse - rolls the camera based on how the angle from the center of the screen to your mouse changes
 LMB/MMB + move mouse - pan XZ YZ<br>
 CTRL + pan - pan XW YW<br>
 Z + pan - pan XV YV<br>
