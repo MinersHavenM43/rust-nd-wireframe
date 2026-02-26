@@ -304,7 +304,7 @@ fn mouse_control(previous_mouse_pos: Vector2<f32>, dimension: usize, shape_matri
 
 fn project_vertex(vertex: &DVector<f32>, render_size: f32, screen_size: Vector2<f32>) -> Vector2<f32> {
     let mut screen_vertex = Vector2::new(-vertex[0], vertex[1]) / (vertex[2]);
-    screen_vertex *= -screen_height() * render_size;
+    screen_vertex *= -screen_size.y * render_size;
     screen_vertex += screen_size / 2.0;
     
     screen_vertex
@@ -368,12 +368,10 @@ fn fade_from_depth(z: f32, near: f32, far: f32, zoom: f32) -> f32 {
     1.0 - clamp(f32::inverse_lerp(near + zoom, far + zoom, z), 0.0, 1.0)
 }
 
-fn render(vertices: &Vec<DVector<f32>>, edges: &Vec<usize>, subdivisions: i32, shape_matrix: &DMatrix<f32>, shape_position: &DVector<f32>, edge_width: f32, near: f32, far: f32, zoom: f32, w_scale: f32, render_size: f32) {
+fn render(vertices: &Vec<DVector<f32>>, edges: &Vec<usize>, subdivisions: i32, shape_matrix: &DMatrix<f32>, shape_position: &DVector<f32>, edge_width: f32, near: f32, far: f32, zoom: f32, w_scale: f32, render_size: f32, screen_size: Vector2<f32>) {
     clear_background(BLACK);
     
     let mut local_space_vertices: Vec<DVector<f32>> = Vec::new();
-    
-    let screen_size = Vector2::new(screen_width(), screen_height());
 
     for vertex in vertices {
         // Vertex in world/camera space
@@ -430,6 +428,7 @@ struct Scene {
     dimension: usize,
     vertices: Vec<DVector<f32>>,
     edges: Vec<usize>,
+    resolution_vector: Vector2<f32>,
 }
 
 impl Scene {
@@ -450,13 +449,14 @@ impl Scene {
             dimension: 0,
             vertices: vec![],
             edges: vec![],
+            resolution_vector: Vector2::new(lines[1].parse().unwrap(), lines[1].parse().unwrap())
         }
     }
 }
 
 #[macroquad::main("nD Renderer")]
 async fn main() {
-    const done_sound_bytes: &[u8] = include_bytes!(".././done.wav");
+    const DONE_SOUND_BYTES: &[u8] = include_bytes!(".././done.wav");
     
     let mut scene = Scene::setup();
     
@@ -465,6 +465,7 @@ async fn main() {
     let mut shape_matrix = DMatrix::identity(scene.dimension, scene.dimension);
     let mut shape_position = DVector::zeros(scene.dimension);
     shape_position[2] = 2.0;
+    
     
     let mut render_size= 0.5;
     let mut edge_width= 1.0 / 84.0;
@@ -486,7 +487,12 @@ async fn main() {
     let mut starting_position: Vec<f32> = vec![];
     let mut motion: Vec<f32> = vec![];
     
-    let done_sound = load_sound_from_bytes(done_sound_bytes).await.unwrap();
+    let done_sound = load_sound_from_bytes(DONE_SOUND_BYTES).await.unwrap();
+    
+    let mut virtual_image = render_target(
+        scene.resolution,
+        scene.resolution,
+    );
     
     set_window_size(1024, 1024);
 
@@ -573,11 +579,30 @@ async fn main() {
         if is_key_pressed(KeyCode::Key0) {
             scene = Scene::setup();
             load_polytope(&mut scene);
-            shape_matrix = DMatrix::identity(scene.dimension, scene.dimension);
-            shape_position = DVector::zeros(scene.dimension);
+            if scene.dimension != shape_position.nrows() {
+                shape_matrix = DMatrix::identity(scene.dimension, scene.dimension);
+                shape_position = DVector::zeros(scene.dimension);
+            }
+            virtual_image = render_target(scene.resolution, scene.resolution);
         }
         
-        render(&scene.vertices, &scene.edges, subdivisions, &shape_matrix, &shape_position, edge_width, near, far, zoom, w_scale, render_size);
+        if image_index > -1 {
+            // set camera to render target
+            set_camera(&Camera2D {
+                render_target: Some(virtual_image.clone()),
+                zoom: vec2(1.0 / (scene.resolution as f32) * 2.0, 1.0 / (scene.resolution as f32) * 2.0),
+                target: vec2((scene.resolution as f32) / 2.0, (scene.resolution as f32) / 2.0),
+                ..Default::default()
+            });
+            
+            // render the scene
+            render(&scene.vertices, &scene.edges, subdivisions, &shape_matrix, &shape_position, edge_width, near, far, zoom, w_scale, render_size, scene.resolution_vector);
+            
+            // go back to the screen
+            set_default_camera();
+        }
+        // render the scene to the screen
+        render(&scene.vertices, &scene.edges, subdivisions, &shape_matrix, &shape_position, edge_width, near, far, zoom, w_scale, render_size, Vector2::new(screen_width(), screen_height()));
         
         if image_index > -1 { // During the loop
             for i in (0..rotations.len()).step_by(2) {
@@ -594,7 +619,7 @@ async fn main() {
                 }
             }
             
-            get_screen_data().export_png(&format!("./images/{:03}.png", image_index));
+            virtual_image.texture.get_texture_data().export_png(&format!("./images/{:03}.png", image_index));
             
             image_index += 1;
         }
@@ -605,7 +630,6 @@ async fn main() {
         if image_index == scene.frame_count { // End
             set_default_camera();
             image_index = -2;
-            set_window_size(1024, 1024);
             for i in 0..scene.dimension {
                 shape_position[i] = 0.0;
             }
@@ -615,11 +639,18 @@ async fn main() {
         
         if is_key_pressed(KeyCode::Escape) {
             set_default_camera();
-            image_index = -2;
-            set_window_size(1024, 1024);
             for i in 0..scene.dimension {
                 shape_position[i] = 0.0;
             }
+            for i in (0..rotations.len()).step_by(2) {
+                let rotation_matrix = rotate_matrix(rotations[i], rotations[i + 1], (TAU / (scene.frame_count as f32)) * (-image_index) as f32, shape_matrix.ncols());
+                if rotations_global_vs_local[i / 2] {
+                    shape_matrix = &shape_matrix * rotation_matrix;
+                } else {
+                    shape_matrix = rotation_matrix * &shape_matrix;
+                }
+            }
+            image_index = -2;
         }
         
         if is_key_pressed(KeyCode::Enter) { // Start
@@ -681,8 +712,6 @@ async fn main() {
                     shape_position[i] = starting_position[i];
                 }
             }
-            
-            set_window_size(scene.resolution, scene.resolution);
         }
         
         next_frame().await
