@@ -573,6 +573,8 @@ async fn main() {
         if is_key_pressed(KeyCode::Key0) {
             scene = Scene::setup();
             load_polytope(&mut scene);
+            shape_matrix = DMatrix::identity(scene.dimension, scene.dimension);
+            shape_position = DVector::zeros(scene.dimension);
         }
         
         render(&scene.vertices, &scene.edges, subdivisions, &shape_matrix, &shape_position, edge_width, near, far, zoom, w_scale, render_size);
