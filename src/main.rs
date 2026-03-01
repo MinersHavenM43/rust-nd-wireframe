@@ -590,7 +590,7 @@ async fn main() {
             // set camera to render target
             set_camera(&Camera2D {
                 render_target: Some(virtual_image.clone()),
-                zoom: vec2(1.0 / (scene.resolution as f32) * 2.0, 1.0 / (scene.resolution as f32) * 2.0),
+                zoom: vec2(1.0 / (scene.resolution as f32) * 2.0, 1.0 / (scene.resolution as f32) * -2.0),
                 target: vec2((scene.resolution as f32) / 2.0, (scene.resolution as f32) / 2.0),
                 ..Default::default()
             });
