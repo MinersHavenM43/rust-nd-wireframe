@@ -8,6 +8,7 @@ use std;
 use std::f32::consts::TAU;
 use std::f32;
 use std::vec;
+use std::env;
 
 fn rotate_matrix(axis_1: usize, axis_2: usize, angle_in_radians: f32, dimension: usize) -> DMatrix<f32> {
     let mut matrix = DMatrix::identity(dimension, dimension);
@@ -74,7 +75,7 @@ fn get_vertices_from_element(polytope_data: &Vec<Vec<Vec<usize>>>, element_verti
 
 fn load_polytope(scene: &mut Scene) {
     if !std::path::Path::new(scene.polytope_path.as_str()).exists() {
-        return
+		panic!("file doesnt exist!!!!");
     }
 
     let contents = std::fs::read_to_string(scene.polytope_path.as_str()).unwrap();
@@ -440,8 +441,17 @@ impl Scene {
         let setup_file_contents = std::fs::read_to_string("./setup.txt").unwrap();
         let lines: Vec<&str> = setup_file_contents.lines().collect();
         
+		let args: Vec<String> = env::args().collect();
+		let args_polytope_path: String;
+		if args.len() < 2 {
+			args_polytope_path = lines[0].to_string();
+		}
+		else {
+			args_polytope_path = args[1].clone();
+		}
+		
         Scene {
-            polytope_path: lines[0].to_string(),
+			polytope_path: args_polytope_path,
             resolution: lines[1].parse().unwrap(),
             frame_count: lines[2].parse().unwrap(),
             min_dimension: lines[3].parse().unwrap(),
@@ -478,6 +488,9 @@ async fn main() {
     let mut previous_mouse_pos = Vector2::new(0.0, 0.0);
     
     let mut subdivisions = 1;
+	
+	let mut facet_expansion = scene.facet_expansion;
+	let facet_expansion_key_speed = f32::exp2(0.25); // 2 ^ 1/4
     
     let mut image_index = -2;
     
@@ -575,6 +588,21 @@ async fn main() {
             if subdivisions == 0 {
                 subdivisions = 1;
             }
+        }
+        if is_key_pressed(KeyCode::T) { // increases facet_expansion
+            scene = Scene::setup();
+			facet_expansion = 1.0 - (1.0 - facet_expansion) / facet_expansion_key_speed;
+			scene.facet_expansion = facet_expansion;
+            load_polytope(&mut scene);
+        }
+		if is_key_pressed(KeyCode::G) { // decreases facet_expansion
+            scene = Scene::setup();
+			facet_expansion = 1.0 - (1.0 - facet_expansion) * facet_expansion_key_speed;
+			if facet_expansion < 0.5 / facet_expansion_key_speed {
+				facet_expansion = 0.0;
+			}
+			scene.facet_expansion = facet_expansion;
+            load_polytope(&mut scene);
         }
         if is_key_pressed(KeyCode::Key0) {
             scene = Scene::setup();
